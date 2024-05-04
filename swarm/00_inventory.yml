@@ -1,0 +1,9 @@
+all:
+	children:
+		managers:
+			hosts:
+				ip_manager
+		workers:
+			hosts:
+				ip_worker1
+				ip_worker2
