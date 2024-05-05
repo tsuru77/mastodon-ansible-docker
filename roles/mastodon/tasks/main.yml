@@ -1,0 +1,8 @@
+---
+# tasks file for roles/mastodon
+
+- name: install jsondiff
+  apt:
+    name: python3-jsondiff
+    state: present
+

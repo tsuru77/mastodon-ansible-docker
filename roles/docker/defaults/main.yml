@@ -10,7 +10,10 @@ docker_packages:
   - docker-ce-cli
   - containerd.io
   - python3-pip
+  - python3-docker
+  - docker-compose
+
 docker_repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
-docker_repo_key: "https://download.docker.com/linux/ubuntu/gpg"
-docker_repo_key_id: 0EBFCD88
+docker_gpg_key: "https://download.docker.com/linux/ubuntu/gpg"
+docker_gpg_key_id: 0EBFCD88
 

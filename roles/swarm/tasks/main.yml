@@ -1,12 +1,21 @@
 ---
 # tasks file for roles/swarm
 
+- name: initialize docker swarm
+  docker_swarm:
+    state: present
+    advertise_addr: 165.22.81.105:2377
+  register: __output_swarm
+  when: inventory_hostname in groups['managers'][0]
+
+
+
 - name: check/init swarm
   docker_swarm:
     state: present
     advertise_addr: eth0:2377
   register: __output_swarm
-  when: inventory_hostname == groups['managers'][0]
+  when: inventory_hostname in groups['managers'][0]
 
 - name: debug
   debug:

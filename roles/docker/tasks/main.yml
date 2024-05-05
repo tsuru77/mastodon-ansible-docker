@@ -18,6 +18,50 @@
     cache_valid_time: 3600
   with_items: "{{ docker_packages }}"
 
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Add universe repository
+  apt_repository:
+    repo: deb http://archive.ubuntu.com/ubuntu focal universe
+    state: present
+
+- name: Install Docker
+  apt:
+    name: "docker-ce"
+    state: "latest"
+
+- name: docker pip
+  apt:
+    name: "python3-pip"
+    state: "latest"
+
+- name: Install Python venv
+  apt:
+    name: python3-venv
+    state: latest
+
+- name: Create a virtual environment
+  command: python3 -m venv /python_venv
+
+- name: Set Python interpreter to the one in the virtual environment
+  set_fact:
+    ansible_python_interpreter: /python_venv/bin/python3
+
+- name: Install setuptools in the virtual environment
+  command: /python_venv/bin/pip install setuptools
+
+- name: Install setuptools in the virtual environment
+  command: /python_venv/bin/pip install requests==2.28.1
+
+
+- name: Install Docker Python library in the virtual environment
+  command: /python_venv/bin/pip install docker
+
+- name: Install packaging Python library in the virtual environment
+  command: /python_venv/bin/pip install packaging
+
 - name: start docker service
   service:
     name: docker

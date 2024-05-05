@@ -2,9 +2,13 @@ all:
  children:
   managers:
    hosts:
-	  192.168.1.45
-  
-	workers:
-	 hosts:
-	  192.168.1.1:
-	  192.168.1.2:
+    165.22.81.105:
+   vars:
+    ansible_ssh_user: root
+  workers:
+   hosts:
+    165.22.81.221: 
+    138.197.178.99:
+   vars:
+    ansible_ssh_user: root
+
