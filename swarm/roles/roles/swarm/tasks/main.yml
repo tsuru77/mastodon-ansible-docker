@@ -1,0 +1,23 @@
+---
+# tasks file for roles/swarm
+
+- name: check/init swarm
+  docker_swarm:
+    state: present
+    advertise_addr: eth0:2377
+  register: __output_swarm
+  when: inventory_hostname == groups['managers'][0]
+
+- name: debug
+  debug:
+    var: __output_swarm
+
+- name: install worker
+  docker_swarm:
+    state: join
+    timeout: 60
+    advertise_addr: eth0:2377
+    join_token: "{{ hostvars[groups['managers'][0]]['__output_swarm']['swarm_facts']['JoinTokens']['Worker'] }}"
+    remote_addrs: "{{ groups['managers'][0] }}"
+  when: inventory_hostname in groups['workers']
+

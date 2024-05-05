@@ -1,9 +1,10 @@
 all:
-	children:
-		managers:
-			hosts:
-				ip_manager
-		workers:
-			hosts:
-				ip_worker1
-				ip_worker2
+ children:
+  managers:
+   hosts:
+	  192.168.1.45
+  
+	workers:
+	 hosts:
+	  192.168.1.1:
+	  192.168.1.2:
