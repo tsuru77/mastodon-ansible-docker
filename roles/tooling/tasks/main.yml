@@ -1,17 +1,11 @@
 ---
 # tasks file for roles/tooling
 
-- name: Ensure /letsencrypt directory exists
+- name: Ensure acme.json exists
   ansible.builtin.file:
-   path: /letsencrypt
-   state: directory
-   mode: '0755'
-
-- name: Ensure /letsencrypt/acme.json exists
-  ansible.builtin.file:
-   path: /letsencrypt/acme.json
-   state: touch
-   mode: '0600'
+    path: /acme.json
+    state: touch
+    mode: '0600'
 
 - name: create traefik network
   docker_network:
@@ -31,6 +25,8 @@
     mounts:
       - source: /var/run/docker.sock
         target: /var/run/docker.sock
+      - source: /acme.json
+        target: /acme.json
         type: bind
     read_only: yes
     restart_config:
@@ -39,29 +35,52 @@
       max_attempts: 5
     networks:
       - "traefik_net"
+    env:
+     - "CF_API_EMAIL=leobouvard08@gmail.com"
+     - "CF_API_KEY=84bdc7f4830c66d149e44e54abbc5089821c9"
     image: "traefik:latest"
     args:
-    - "--log.level=INFO"
-    - "--api.dashboard=true"
-    - "--entryPoints.http.address=:80"
-    - "--entryPoints.api.address=:8080"
-    - "--entryPoints.https.address=:443"
-    - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
-    - "--certificatesResolvers.letsencrypt.acme.httpChallenge=true"
-    - "--certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=http"
-    - "--certificatesResolvers.myresolver.acme.email=leobouvard08@gmail.com"
-    - "--certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+     - "--log.level=INFO"
+     - "--api.dashboard=true"
+     - "--entryPoints.http.address=:80"
+     - "--entryPoints.api.address=:8080"
+     - "--entryPoints.https.address=:443"
+     - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+     - "--entrypoints.https.http.tls.certresolver=myresolver"
+     -  "--certificatesresolvers.myresolver.acme.storage=/acme.json"
+
+     - "--certificatesResolvers.myresolver.acme.email=leobouvard08@gmail.com"
+     - "--certificatesResolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+     - "--certificatesResolvers.myresolver.acme.keytype=RSA4096"
+     - "--certificatesResolvers.myresolver.acme.tlschallenge=true"
+     - "--certificatesResolvers.myresolver.acme.httpchallenge.entrypoint=web"
+     - "--certificatesResolvers.myresolver.acme.dnschallenge=true"
+     - "--certificatesResolvers.myresolver.acme.dnschallenge.delaybeforecheck=0"
+     - "--certificatesResolvers.myresolver.acme.httpChallenge=true"
+     - "--certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=http"
+   
+   
+    # LetsEncrypt Staging Server - uncomment when testin
+     - "--certificatesresolvers.myresolver.acme.dnsChallenge.provider=cloudflare"
+
     labels:
       traefik.enable: "true"
       traefik.swarmmode: "true"
       traefik.docker.network: "traefik_net"
       traefik.http.routers.traefik-public-http.rule: "Host(`traefik.leeodev.me`)"
       traefik.http.routers.traefik-public-http.entrypoints: "http"
+      traefik.http.routers.traefik-public-http.middlewares: "redirect-to-https"
       traefik.http.routers.traefik-public-http.service: "api@internal"
       traefik.http.services.traefik-public.loadbalancer.server.port: "8080"
       traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: "https"
       traefik.http.routers.traefik-public-https.rule: "Host(`traefik.leeodev.me`)"
       traefik.http.routers.traefik-public-https.entrypoints: "https"
       traefik.http.routers.traefik-public-https.tls.certresolver: "myresolver"
+      traefik.http.routers.traefik-public-https.service: "api@internal"
+      traefik.http.middlewares.auth.basicauth.users: "admin:$apr1$T9995ZCE$h9Zpkgn3wMcjihcjKq1E3."
+      traefik.http.middlewares.retry.retry.attempts: "3"
+      traefik.http.routers.traefik-public-https.middlewares: "auth,retry"
+
     replicas: 1
   when: inventory_hostname in groups['managers'][0]
+
