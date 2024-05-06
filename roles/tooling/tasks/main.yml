@@ -52,16 +52,9 @@
      - "--certificatesResolvers.myresolver.acme.email=leobouvard08@gmail.com"
      - "--certificatesResolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
      - "--certificatesResolvers.myresolver.acme.keytype=RSA4096"
-     - "--certificatesResolvers.myresolver.acme.tlschallenge=true"
-     - "--certificatesResolvers.myresolver.acme.httpchallenge.entrypoint=web"
      - "--certificatesResolvers.myresolver.acme.dnschallenge=true"
+     - "--certificatesResolvers.myresolver.acme.dnschallenge.provider=cloudflare"
      - "--certificatesResolvers.myresolver.acme.dnschallenge.delaybeforecheck=0"
-     - "--certificatesResolvers.myresolver.acme.httpChallenge=true"
-     - "--certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=http"
-   
-   
-    # LetsEncrypt Staging Server - uncomment when testin
-     - "--certificatesresolvers.myresolver.acme.dnsChallenge.provider=cloudflare"
 
     labels:
       traefik.enable: "true"
