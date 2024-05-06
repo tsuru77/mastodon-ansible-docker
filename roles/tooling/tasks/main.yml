@@ -7,51 +7,42 @@
     driver: overlay
   when: inventory_hostname in groups['managers']
 
-- name: Deploy traefik service
+- name: Deploy Traefik
   docker_swarm_service:
     name: traefik
-    placement:
-      constraints: "node.role==manager"
-    publish:
-    - { published_port: "80", target_port: "80" }
-    - { published_port: "443", target_port: "443" }
-    mounts:
-      - source: /var/run/docker.sock
-        target: /var/run/docker.sock
-        type: bind
-    read_only: yes
-    restart_config:
-      condition: any
-      delay: 30s
-      max_attempts: 5
-    networks:
-      - "traefik_net"
     image: "traefik:latest"
     args:
     - "--log.level=INFO"
     - "--api.dashboard=true"
     - "--entryPoints.http.address=:80"
-    - "--entryPoints.api.address=:8080"
     - "--entryPoints.https.address=:443"
-    - "--providers.docker.swarmmode"
-    - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-    - "--certificatesresolvers.myresolver.acme.email=your-email@example.com"
-    - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-    - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=http"
+    - "--providers.docker=true"
+    - "--providers.swarm=true"
+    - "--certificatesResolvers.myresolver.acme.email=leobouvard08@gmail.com"
+    - "--certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    - "--certificatesResolvers.myresolver.acme.tlsChallenge=true"
     labels:
       traefik.enable: "true"
-      traefik.swarmmode: "true"
       traefik.docker.network: "traefik_net"
-      traefik.http.routers.traefik-public-http.rule: "Host(`traefik.swarm`)"
+      traefik.http.routers.traefik-public-http.rule: "Host(`traefik.leeodev.me`)"
       traefik.http.routers.traefik-public-http.entrypoints: "http"
+      traefik.http.routers.traefik-public-http.middlewares: "https-redirect"
+      traefik.http.middlewares.https-redirect.redirectscheme.scheme: "https"
       traefik.http.routers.traefik-public-http.service: "api@internal"
       traefik.http.services.traefik-public.loadbalancer.server.port: "8080"
-      traefik.http.routers.traefik-public-https.rule: "Host(`traefik.swarm`)"
+      traefik.http.routers.traefik-public-https.rule: "Host(`traefik.leeodev.me`)"
       traefik.http.routers.traefik-public-https.entrypoints: "https"
-      traefik.http.routers.traefik-public-https.service: "api@internal"
-      traefik.http.routers.traefik-public-https.tls: "true"
       traefik.http.routers.traefik-public-https.tls.certresolver: "myresolver"
     replicas: 1
+    publish:
+      - target_port: 8080
+        published_port: 8080
+        protocol: tcp
+        mode: ingress
+    mounts:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
   when: inventory_hostname in groups['managers'][0]
 
-
+  
