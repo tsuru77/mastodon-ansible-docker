@@ -1,11 +1,24 @@
 ---
 # tasks file for roles/tooling
 
+- name: Ensure /letsencrypt directory exists
+  ansible.builtin.file:
+   path: /letsencrypt
+   state: directory
+   mode: '0755'
+
+- name: Ensure /letsencrypt/acme.json exists
+  ansible.builtin.file:
+   path: /letsencrypt/acme.json
+   state: touch
+   mode: '0600'
+
 - name: create traefik network
   docker_network:
     name: traefik_net
     driver: overlay
   when: inventory_hostname in groups['managers']
+
 
 - name: Deploy traefik service
   docker_swarm_service:
@@ -34,6 +47,10 @@
     - "--entryPoints.api.address=:8080"
     - "--entryPoints.https.address=:443"
     - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+    - "--certificatesResolvers.letsencrypt.acme.httpChallenge=true"
+    - "--certificatesResolvers.myresolver.acme.httpChallenge.entryPoint=http"
+    - "--certificatesResolvers.myresolver.acme.email=leobouvard08@gmail.com"
+    - "--certificatesResolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     labels:
       traefik.enable: "true"
       traefik.swarmmode: "true"
@@ -42,5 +59,9 @@
       traefik.http.routers.traefik-public-http.entrypoints: "http"
       traefik.http.routers.traefik-public-http.service: "api@internal"
       traefik.http.services.traefik-public.loadbalancer.server.port: "8080"
+      traefik.http.middlewares.redirect-to-https.redirectscheme.scheme: "https"
+      traefik.http.routers.traefik-public-https.rule: "Host(`traefik.leeodev.me`)"
+      traefik.http.routers.traefik-public-https.entrypoints: "https"
+      traefik.http.routers.traefik-public-https.tls.certresolver: "myresolver"
     replicas: 1
   when: inventory_hostname in groups['managers'][0]
