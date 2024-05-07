@@ -1,8 +1,119 @@
 ---
 # tasks file for roles/mastodon
 
-- name: install jsondiff
-  apt:
-    name: python3-jsondiff
+- name: Ensure pyyaml is installed
+  pip:
+    name: pyyaml
     state: present
 
+
+- name: Ensure jsondiff is installed
+  pip:
+    name: jsondiff
+    state: present
+
+
+- name : create directory for mastodon docker-compose configuration
+  file:
+    path: /var/data/config/mastodon
+    state: directory
+
+- name : check if mastodon directory exists
+  stat:
+    path: /var/data/config/mastodon
+  register: __output_mastodon
+
+
+
+- name : create directory for redis
+  file:
+    path: /var/data/runtime/mastodon/redis
+    state: directory
+    recurse: yes
+
+- name: Check if redis directory exists
+  stat:
+    path: /var/data/runtime/redis
+  register: __output_redis
+
+# - name : create directory for elasticsearch
+#   file:
+#     path: /var/data/runtime/mastodon/elasticsearch
+#     state: directory
+#     recurse: yes
+
+# - name: Check if elasticsearch directory exists
+#   stat:
+#     path: /var/data/runtime/elasticsearch
+#   register: __output_elasticsearch
+
+- name : create directory for postgres
+  file:
+    path: /var/data/runtime/mastodon/postgres
+    state: directory
+    recurse: yes
+
+- name: Check if postgres directory exists
+  stat:
+    path: /var/data/runtime/postgres
+  register: __output_postgres
+
+- name: copy mastodon compose yaml
+  copy:
+    src: files/mastodon.yml
+    dest: /var/data/config/mastodon/mastodon.yml
+  when: inventory_hostname in groups['managers']
+
+- name: Ensure mastodon env file exists
+  file:
+    path: /var/data/config/mastodon/mastodon.env
+    state: touch
+  when: inventory_hostname in groups['managers']
+
+
+- name: copy mastodon env
+  copy:
+    src: files/mastodon.env
+    dest: /var/data/config/mastodon/
+  when: inventory_hostname in groups['managers']
+
+- name: Generate rake secret
+  command: docker run -it tootsuite/mastodon bundle exec rake secret
+  register: rake_secret_output
+  when: inventory_hostname in groups['managers']
+
+- name: Generate web push vapid keys
+  command: docker run -it tootsuite/mastodon bundle exec rake mastodon:webpush:generate_vapid_key
+  register: vapid_keys_output
+  when: inventory_hostname in groups['managers']
+
+- name: Update environment file with secrets 1
+  lineinfile:
+    path: /var/data/config/mastodon/mastodon.env
+    regexp: '^SECRET_KEY_BASE='
+    line: 'SECRET_KEY_BASE={{ rake_secret_output.stdout }}'
+  when: inventory_hostname in groups['managers']
+
+- name: Update environment file with secrets 2
+  lineinfile:
+      path: /var/data/config/mastodon/mastodon.env
+      regexp: '^VAPID_PRIVATE_KEY='
+      line: 'VAPID_PRIVATE_KEY={{ vapid_keys_output.stdout.split()[0] }}'
+  when: inventory_hostname in groups['managers']
+
+- name: Update environment file with secrets 3    
+  lineinfile:
+    path: /var/data/config/mastodon/mastodon.env
+    regexp: '^VAPID_PUBLIC_KEY='
+    line: 'VAPID_PUBLIC_KEY={{ vapid_keys_output.stdout.split()[1] }}'
+  when: inventory_hostname in groups['managers']
+
+
+- name: deploy stack mastodon
+  docker_stack:
+    state: present
+    name: mastodon
+    compose: /var/data/config/mastodon/mastodon.yml 
+  
+  when: inventory_hostname in groups['managers']
+  run_once: true
